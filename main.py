@@ -6,15 +6,15 @@ from flask import session
 root_md_admin="<|menu|label=Menu|lov={[('Page-1', 'Page 1'), ('Page-2', 'Page 2'), ('/logout', 'Log Out')]}|on_action=on_menu|>"
 root_md_user="<|menu|label=Menu|lov={[('Page-1', 'Page 1'), ('/logout', 'Log Out')]}|on_action=on_menu|>"
 
+user_type = ""
+user_name = ""
+
 
 # ============================================= page 1 =============================================
 db = get_database()
 events_data = list(db['events'].find())
 
 # Sample user
-user_name = "Eve"
-user_type = 'none'
-print("USER", get_user())
 
 def event_to_table():
     events ={
@@ -140,7 +140,7 @@ page2_md = """
 <|{slider_min}|slider|min={min_event}|max={max_event}|><|{slider_max}|slider|min={min_event}|max={max_event}|>
 
 Event people joined vs date
-<|{events}|chart|x=event date|y[1]=event people joined|> Frequency of # of people joined event <|{events}|chart|type=histogram|y=event people joined|> 
+<|{events}|chart|x=event date|y[1]=event people joined|> Frequency of # of people joined event <|{events}|chart|type=histogram|y=event people joined|>
 """
 
 
@@ -156,75 +156,67 @@ def on_change(state, var_name: str, var_value):
     state.events = event_to_table(events_data[state.slider_min: state.slider_max])
 
 # ==================================================================================================
-    
+
 # ============================================= Home =============================================
+
+
+homepage = """
+<|{user_name}|input|>
+
+<|Login As User|button|on_action=on_login|>  <|Login As Admin|button|on_action=on_login_admin|>
+"""
+
+
+# Gui(page2_md).run(use_reloader=True)
+
 def on_login(state):
-    user_type='user'
-    if "user" in session:
-        print(session['user']['userinfo']['nickname'])
-    else:
-        
-        navigate(state, "/login?user_type=user")
-        
-    
-    # print("USER", get_user())
+    user_type = "user"
+    user_name=state.user_name
+    navigate(state, to="Page-1")
 
 def on_login_admin(state):
-    
-    user_type='admin'
-    print(session)
-    if "user" in session:
-        print("A")
-        # print("A", session['user']['userinfo']['email'])
-        navigate(state, to="Page-1")
-    else:
-        print("B")
-        navigate(state, "/login?user_type=admin")
-    
-    # user_name, user_type = get_user()
-    # print("USER", get_user())
+    user_type = 'admin'
+    user_name = state.user_name
+    navigate(state, to="Page-1")
 
 def on_logout(state):
-    navigate(state, "/logout")
-    
     user_type = 'none'
-    # print("USER", get_user())
-    
-homepage = """
-# Welcome to Club Statistics App
+    navigate(state, to="Page-1")
 
-This app allows you to log in as an owner or a customer and view club statistics.
+# homepage = """
+# # Welcome to Club Statistics App
 
-To access the app, you can log in as an owner or a customer. Click on the respective buttons below:
+# This app allows you to log in as an owner or a customer and view club statistics.
 
-Enjoy using the Club Statistics App!
+# To access the app, you can log in as an owner or a customer. Click on the respective buttons below:
 
-""" + "<|Log In as Admin|button|on_action=on_login_admin|> <|Log In as Customer|button|on_action=on_login|> "
+# Enjoy using the Club Statistics App!
+
+# """ + "<|Log In as Admin|button|on_action=on_login_admin|> <|Log In as Customer|button|on_action=on_login|> "
 
 # ==================================================================================================
 
-def on_menu(state, action, info):
-    page = info["args"][0]
-    navigate(state, to=page, force=True, tab='_self')
-user_name = "Eve"
-user_type = 'none'
+    def on_menu(state, action, info):
+        page = info["args"][0]
+        navigate(state, to=page, force=True, tab='_self')
+
 if user_type == "user":
     page1_md += "<|Join event|button|on_action=add_user|><|Unjoin event|button|on_action=remove_user|>"
     pages = {
+        "Page-3": homepage,
         "/": root_md_user,
         "Page-1": page1_md,
-    }
-elif user_type == "admin":
-    page1_md += "<|{name}|input|> <|{detail}|input|><|{date}|input|><|{location}|input|><|Add/Edit event|button|on_action=add_event|><|Remove event|button|on_action=remove_event|>"
-    
-    pages = {
-        "/": root_md_admin,
-        "Page-1": page1_md, 
-        "Page-2": page2_md
+        "logout": "<|Logout|on_action=on_logout|>"
     }
 else:
+    page1_md += "<|{name}|input|> <|{detail}|input|><|{date}|input|><|{location}|input|><|Add/Edit event|button|on_action=add_event|><|Remove event|button|on_action=remove_event|>"
+
     pages = {
-        "/": homepage
+        "Page-3": homepage,
+        "/": root_md_admin,
+        "Page-1": page1_md,
+        "Page-2": page2_md,
+        "logout": "<|Logout|on_action=on_logout|>"
     }
 
-Gui(pages=pages, flask = get_app()).run(use_reloader=True)
+Gui(pages=pages).run(use_reloader=True)
